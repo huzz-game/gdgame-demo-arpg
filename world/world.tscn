@@ -1,0 +1,129 @@
+[gd_scene format=4 uid="uid://1gk07aunpla5"]
+
+[ext_resource type="PackedScene" uid="uid://br2hliv8qkuw5" path="res://player/player.tscn" id="1_6xmxd"]
+[ext_resource type="TileSet" uid="uid://eqos6hit822d" path="res://world/dirt_tileset.tres" id="2_fn3g3"]
+[ext_resource type="Texture2D" uid="uid://hysi2242s6jb" path="res://world/grass_background.png" id="2_tcf2h"]
+[ext_resource type="PackedScene" uid="uid://bbeeyb16qmkgq" path="res://world/bush.tscn" id="3_4717r"]
+[ext_resource type="TileSet" uid="uid://lns641en68ou" path="res://world/cliff_tileset.tres" id="3_fn3g3"]
+[ext_resource type="PackedScene" uid="uid://61qig2edm325" path="res://world/tree.tscn" id="4_h5o24"]
+[ext_resource type="PackedScene" uid="uid://bukdjlxmtl3d3" path="res://world/grass.tscn" id="7_sc4t8"]
+[ext_resource type="PackedScene" uid="uid://dgdmwihm12aid" path="res://enemies/bat_enemy.tscn" id="8_ai45w"]
+[ext_resource type="PackedScene" uid="uid://biuwdcidi7x4h" path="res://ui/hearts_ui.tscn" id="9_4papg"]
+
+[node name="World" type="Node2D" unique_id=1232299454]
+y_sort_enabled = true
+
+[node name="GroundLayer" type="Node2D" parent="." unique_id=2114578142]
+z_index = -10
+
+[node name="Parallax2D" type="Parallax2D" parent="GroundLayer" unique_id=983186799]
+repeat_size = Vector2(320, 192)
+
+[node name="GrassBackground" type="TextureRect" parent="GroundLayer/Parallax2D" unique_id=1745452486]
+offset_right = 320.0
+offset_bottom = 192.0
+texture = ExtResource("2_tcf2h")
+stretch_mode = 1
+
+[node name="GrassBackground2" type="TextureRect" parent="GroundLayer/Parallax2D" unique_id=1608292524]
+offset_right = 320.0
+offset_bottom = 192.0
+texture = ExtResource("2_tcf2h")
+stretch_mode = 1
+
+[node name="DirtTileMapLayer" type="TileMapLayer" parent="GroundLayer" unique_id=1968546227]
+tile_map_data = PackedByteArray("AAAaAAkAAgAGAAMAAAAaAAgAAgAAAAAAAAAZAAcAAgADAAIAAAAZAAYAAgAIAAAAAAAaAAYAAgAGAAMAAAAaAAUAAgAAAAAAAAAbAAUAAgACAAAAAAAbAAYAAgAFAAMAAAAcAAYAAgAHAAAAAAAcAAcAAgADAAEAAAAcAAgAAgAHAAMAAAAbAAgAAgAFAAAAAAAbAAkAAgACAAIAAAAZAAkAAgABAAMAAAAYAAkAAgABAAMAAAAXAAkAAgABAAMAAAAWAAkAAgABAAMAAAAVAAkAAgABAAMAAAAUAAkAAgABAAMAAAATAAkAAgABAAMAAAASAAkAAgABAAMAAAARAAkAAgABAAMAAAAQAAkAAgAEAAAAAAAQAAoAAgAHAAMAAAAPAAoAAgAEAAAAAAAPAAsAAgAHAAIAAAAOAAsAAgABAAAAAAANAAsAAgABAAAAAAAMAAsAAgABAAAAAAALAAsAAgABAAAAAAAKAAsAAgAFAAIAAAAKAAoAAgACAAEAAAAKAAkAAgAHAAIAAAAKAAgAAgADAAEAAAAKAAcAAgAEAAAAAAALAAcAAgAGAAMAAAAMAAcAAgABAAIAAAANAAcAAgABAAIAAAAOAAcAAgACAAIAAAAOAAYAAgAFAAAAAAAPAAYAAgAHAAMAAAAPAAUAAgADAAEAAAAPAAQAAgAHAAAAAAAOAAQAAgAEAAMAAAAOAAMAAgAHAAAAAAANAAMAAgAFAAMAAAAMAAMAAgAGAAMAAAALAAMAAgAFAAAAAAAKAAMAAgAEAAIAAAAKAAQAAgAAAAIAAAALAAQAAgAHAAEAAAALAAUAAgAEAAIAAAAMAAUAAgABAAAAAAANAAUAAgACAAAAAAANAAYAAgAFAAIAAAAMAAYAAgABAAEAAAALAAYAAgAAAAEAAAAJAAkAAgAAAAAAAAAJAAoAAgAGAAQAAAAIAAoAAgAAAAMAAAAJAAsAAgAAAAEAAAAJAAwAAgAAAAIAAAAKAAwAAgABAAIAAAALAAwAAgABAAIAAAAMAAwAAgABAAIAAAANAAwAAgABAAIAAAAOAAwAAgABAAIAAAAPAAwAAgAFAAMAAAAQAAwAAgAHAAAAAAAQAA0AAgADAAEAAAAQAA4AAgADAAEAAAAQAA8AAgADAAEAAAAQABAAAgAIAAMAAAARABAAAgABAAMAAAASABAAAgABAAMAAAATABAAAgABAAMAAAAUABAAAgACAAMAAAAPABAAAgABAAMAAAAOABAAAgABAAMAAAANABAAAgABAAMAAAAMABAAAgABAAMAAAALABAAAgABAAMAAAAKABAAAgABAAMAAAAJABAAAgAAAAMAAAAYAAYAAgABAAMAAAAXAAYAAgAEAAMAAAAXAAUAAgAHAAEAAAAWAAUAAgAAAAIAAAAVAAQAAgAAAAIAAAAVAAMAAgAAAAAAAAAWAAMAAgABAAAAAAAXAAMAAgACAAAAAAAWAAQAAgAGAAEAAAAXAAQAAgACAAEAAAANAAIAAgAHAAIAAAAMAAIAAgAAAAAAAAAJAAAAAgAAAAAAAAAIAAEAAgABAAAAAAAHAAEAAgAEAAIAAAAHAAIAAgAJAAEAAAAGAAIAAgAAAAAAAAAFAAMAAgAAAAMAAAAGAAMAAgAGAAMAAAAHAAMAAgACAAIAAAAIAAIAAgABAAIAAAAJAAIAAgABAAIAAAAKAAIAAgAHAAEAAAAKAAEAAgACAAEAAAAJAAEAAgAGAAIAAAAHAAAAAgAHAAAAAAAGAAAAAgAAAAMAAAANAAEAAgAEAAEAAAAOAAEAAgACAAIAAAAOAAAAAgACAAAAAAAKAAAAAgAFAAAAAAALAAAAAgABAAMAAAAMAAAAAgABAAMAAAANAAAAAgAGAAAAAAA=")
+tile_set = ExtResource("2_fn3g3")
+
+[node name="CliffTileMapLayer" type="TileMapLayer" parent="GroundLayer" unique_id=1761601334]
+tile_map_data = PackedByteArray("AAACAAUAAQADAAIAAAACAAQAAQAHAAAAAAABAAQAAQAEAAMAAAABAAMAAQADAAEAAAABAAIAAQADAAAAAAAIAAMAAQAAAAMAAAAJAAMAAQAHAAMAAAAJAAIAAQADAAAAAAADAAkAAQAAAAMAAAAEAAkAAQABAAMAAAAFAAkAAQABAAMAAAAGAAkAAQACAAMAAAAJAAkAAQAAAAMAAAAKAAkAAQABAAMAAAALAAkAAQABAAMAAAAMAAkAAQABAAMAAAANAAkAAQACAAMAAAAOAAcAAQADAAIAAAAOAAYAAQAEAAAAAAAPAAYAAQAHAAMAAAAPAAUAAQADAAAAAAALAAAAAQACAAMAAAAKAAAAAQAAAAMAAAAEAAIAAQADAAMAAAA=")
+tile_set = ExtResource("3_fn3g3")
+
+[node name="Player" parent="." unique_id=1042779890 groups=["player"] instance=ExtResource("1_6xmxd")]
+position = Vector2(191, 184)
+motion_mode = 1
+
+[node name="Tree" parent="." unique_id=1175536481 instance=ExtResource("4_h5o24")]
+position = Vector2(192, 144)
+
+[node name="Tree2" parent="." unique_id=79648942 instance=ExtResource("4_h5o24")]
+position = Vector2(288, 184)
+
+[node name="Tree3" parent="." unique_id=1409659711 instance=ExtResource("4_h5o24")]
+position = Vector2(232, 248)
+
+[node name="Tree4" parent="." unique_id=698063672 instance=ExtResource("4_h5o24")]
+position = Vector2(64, 272)
+
+[node name="Bush7" parent="." unique_id=969780032 instance=ExtResource("3_4717r")]
+position = Vector2(128, 224)
+
+[node name="Bush8" parent="." unique_id=887768101 instance=ExtResource("3_4717r")]
+position = Vector2(128, 120)
+
+[node name="Bush11" parent="." unique_id=369276971 instance=ExtResource("3_4717r")]
+
+[node name="Bush9" parent="." unique_id=1272475971 instance=ExtResource("3_4717r")]
+position = Vector2(336, 232)
+
+[node name="Bush10" parent="." unique_id=360015110 instance=ExtResource("3_4717r")]
+position = Vector2(392, 192)
+
+[node name="Grass" parent="." unique_id=1194386380 instance=ExtResource("7_sc4t8")]
+position = Vector2(104, 168)
+
+[node name="Grass2" parent="." unique_id=1683996540 instance=ExtResource("7_sc4t8")]
+position = Vector2(104, 152)
+
+[node name="Grass3" parent="." unique_id=1306996110 instance=ExtResource("7_sc4t8")]
+position = Vector2(104, 136)
+
+[node name="Grass4" parent="." unique_id=419248460 instance=ExtResource("7_sc4t8")]
+position = Vector2(120, 136)
+
+[node name="Grass5" parent="." unique_id=338177087 instance=ExtResource("7_sc4t8")]
+position = Vector2(120, 152)
+
+[node name="Grass6" parent="." unique_id=281167929 instance=ExtResource("7_sc4t8")]
+position = Vector2(120, 168)
+
+[node name="Grass7" parent="." unique_id=2037466172 instance=ExtResource("7_sc4t8")]
+position = Vector2(152, 200)
+
+[node name="Grass8" parent="." unique_id=721872133 instance=ExtResource("7_sc4t8")]
+position = Vector2(168, 200)
+
+[node name="Grass9" parent="." unique_id=943541210 instance=ExtResource("7_sc4t8")]
+position = Vector2(168, 216)
+
+[node name="Grass10" parent="." unique_id=1689454586 instance=ExtResource("7_sc4t8")]
+position = Vector2(184, 216)
+
+[node name="Grass12" parent="." unique_id=1474251778 instance=ExtResource("7_sc4t8")]
+position = Vector2(200, 216)
+
+[node name="Grass13" parent="." unique_id=391171313 instance=ExtResource("7_sc4t8")]
+position = Vector2(216, 192)
+
+[node name="Grass14" parent="." unique_id=1671747911 instance=ExtResource("7_sc4t8")]
+position = Vector2(232, 192)
+
+[node name="Grass11" parent="." unique_id=572183031 instance=ExtResource("7_sc4t8")]
+position = Vector2(168, 232)
+
+[node name="BatEnemy" parent="." unique_id=1675682167 instance=ExtResource("8_ai45w")]
+position = Vector2(120, 184)
+
+[node name="BatEnemy2" parent="." unique_id=2121972455 instance=ExtResource("8_ai45w")]
+position = Vector2(280, 224)
+
+[node name="BatEnemy3" parent="." unique_id=600245533 instance=ExtResource("8_ai45w")]
+position = Vector2(248, 136)
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=312168020]
+
+[node name="HeartsUI" parent="UI" unique_id=1151638792 instance=ExtResource("9_4papg")]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 4.0
+offset_bottom = 4.0
