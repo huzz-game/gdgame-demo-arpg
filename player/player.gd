@@ -13,6 +13,8 @@ var last_input_vector := Vector2.DOWN
 @onready var playback = animation_tree.get("parameters/StateMachine/playback") as AnimationNodeStateMachinePlayback
 @onready var blink_animation_player: AnimationPlayer = $BlinkAnimationPlayer
 @onready var hurtbox: Hurtbox = $Hurtbox
+@onready var hurt_audio_stream_player: AudioStreamPlayer = $HurtAudioStreamPlayer
+
 
 func _ready() -> void:
 	hurtbox.hurt.connect(take_hit.call_deferred)
@@ -48,7 +50,9 @@ func move_state(delta: float) -> void:
 
 func take_hit(other_hitbox: Hitbox) -> void:
 	stats.health -= other_hitbox.damage
+	hurt_audio_stream_player.play()
 	blink_animation_player.play("blink")
+	
 
 func roll_state(delta: float) -> void:
 	velocity = last_input_vector.normalized() * ROLL_SPEED

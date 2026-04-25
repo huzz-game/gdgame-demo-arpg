@@ -152,7 +152,7 @@ stats = SubResource("Resource_ww8v4")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1113922929]
 texture = ExtResource("1_0fsds")
-offset = Vector2(0, -4)
+offset = Vector2(-1, -4)
 hframes = 5
 
 [node name="ShadowSprite2D" type="Sprite2D" parent="." unique_id=1343012953]
@@ -193,3 +193,6 @@ metadata/_custom_type_script = "uid://bftjfpcduryc7"
 position = Vector2(0, -6)
 shape = SubResource("CircleShape2D_boacx")
 debug_color = Color(0.7414413, 0.26088747, 0.9484437, 0.41960785)
+
+[node name="Center" type="Marker2D" parent="." unique_id=2096028397]
+position = Vector2(0, -7)

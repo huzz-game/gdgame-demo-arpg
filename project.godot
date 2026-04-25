@@ -30,6 +30,7 @@ enabled=PackedStringArray("res://addons/gd-plug-plus/plugin.cfg")
 [global_group]
 
 player=""
+navigation_polygon_source_geometry_group=""
 
 [input]
 
