@@ -29,6 +29,8 @@ const SELF_ADDON_DIR = "addons/gd-plug-plus"
 var addon_data: AddonData = AddonData.new()
 var loading_spinner: TextureRect
 var release_manager: ReleaseManager
+var _download_progress_bar: ProgressBar
+var _overlay_base_text: String = ""
 
 var _is_executing: bool = false
 var _version_info_task_id: int = -1
@@ -123,6 +125,14 @@ var _settings_flash_tween: Tween
 var _settings_refreshing: bool = false
 var _settings_header_rtl: RichTextLabel
 var _about_labels: Array[Dictionary] = []
+var _cache_labels: Array[Dictionary] = []
+var _cache_repo_path_label: Label
+var _cache_release_path_label: Label
+var _cache_clear_repo_btn: Button
+var _cache_clear_release_btn: Button
+var _proxy_enable_cb: CheckBox
+var _proxy_host_input: LineEdit
+var _proxy_port_spin: SpinBox
 var _console_header_height: int = PlugUIConstants.CONSOLE_HEADER_HEIGHT
 var _console_expanded_height: int = PlugUIConstants.CONSOLE_EXPANDED_HEIGHT
 
@@ -252,6 +262,18 @@ func _ready():
 	overlay_vbox.add_theme_constant_override(
 		"separation", _scaled(PlugUIConstants.SEPARATION_LARGE)
 	)
+	_download_progress_bar = ProgressBar.new()
+	_download_progress_bar.custom_minimum_size = Vector2(_scaled(300), 0)
+	_download_progress_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_download_progress_bar.visible = false
+	_download_progress_bar.show_percentage = true
+	var cancel_btn_idx := cancel_update_btn.get_index() if cancel_update_btn else -1
+	if cancel_btn_idx >= 0:
+		overlay_vbox.add_child(_download_progress_bar)
+		overlay_vbox.move_child(_download_progress_bar, cancel_btn_idx)
+	else:
+		overlay_vbox.add_child(_download_progress_bar)
+	release_manager.download_progress.connect(_on_download_progress)
 
 	installed_tree.columns = PlugUIConstants.INSTALLED_COL_WIDTHS.size()
 	installed_tree.column_titles_visible = true
@@ -749,7 +771,7 @@ func _refresh_installed_tree(filter_text: String = ""):
 		child.set_custom_color(1, COLOR_URL)
 
 		var ver = first_addon.get("version", "")
-		child.set_text(2, ("v" + ver) if not ver.is_empty() else "")
+		child.set_text(2, _format_version(ver))
 		child.set_text_alignment(2, HORIZONTAL_ALIGNMENT_CENTER)
 
 		# Col 3: branch/tag
@@ -856,7 +878,7 @@ func _refresh_installed_tree(filter_text: String = ""):
 				sub_item.set_text(1, sp.get("description", ""))
 				sub_item.set_custom_color(1, COLOR_URL)
 				var sp_ver = sp.get("version", "")
-				sub_item.set_text(2, ("v" + sp_ver) if not sp_ver.is_empty() else "")
+				sub_item.set_text(2, _format_version(sp_ver))
 				sub_item.set_text(
 					5,
 					tr("SUB_INSTALLED") if sp.get("installed", false) else tr("SUB_NOT_INSTALLED")
@@ -1054,10 +1076,66 @@ func disable_ui(disabled: bool = true):
 func show_overlay(show: bool = true, text: String = ""):
 	loading_overlay.visible = show
 	loading_label.text = text
+	_overlay_base_text = text
+	if _download_progress_bar:
+		_download_progress_bar.visible = false
+		_download_progress_bar.value = 0
 	if cancel_update_btn:
 		cancel_update_btn.visible = show
 		cancel_update_btn.disabled = false
 		cancel_update_btn.text = tr("BTN_CANCEL")
+
+
+func _on_download_progress(downloaded_bytes: int, total_bytes: int) -> void:
+	if loading_overlay.visible and _download_progress_bar:
+		_download_progress_bar.visible = true
+		if total_bytes > 0:
+			_download_progress_bar.max_value = total_bytes
+			_download_progress_bar.value = downloaded_bytes
+			var pct := int(float(downloaded_bytes) / float(total_bytes) * 100.0)
+			loading_label.text = "%s  (%s / %s  %d%%)" % [
+				_overlay_base_text,
+				String.humanize_size(downloaded_bytes),
+				String.humanize_size(total_bytes),
+				pct,
+			]
+		else:
+			_download_progress_bar.max_value = 100
+			_download_progress_bar.value = 0
+			loading_label.text = "%s  (%s)" % [
+				_overlay_base_text,
+				String.humanize_size(downloaded_bytes),
+			]
+	if not loading_overlay.visible and _is_executing:
+		var tip := _format_download_tooltip(downloaded_bytes, total_bytes)
+		_set_checked_items_status(_format_download_status(downloaded_bytes, total_bytes), COLOR_CHECKING, tip)
+
+
+func _format_download_status(downloaded_bytes: int, total_bytes: int) -> String:
+	var base := tr("STATUS_DOWNLOADING")
+	if total_bytes > 0:
+		var pct := int(float(downloaded_bytes) / float(total_bytes) * 100.0)
+		return "%s%d%%" % [base, pct]
+	return base
+
+
+func _format_download_tooltip(downloaded_bytes: int, total_bytes: int) -> String:
+	if total_bytes > 0:
+		var pct := int(float(downloaded_bytes) / float(total_bytes) * 100.0)
+		return "%s / %s (%d%%)" % [
+			String.humanize_size(downloaded_bytes),
+			String.humanize_size(total_bytes),
+			pct,
+		]
+	if downloaded_bytes > 0:
+		return String.humanize_size(downloaded_bytes)
+	return ""
+
+
+func _format_version(ver: String, fallback: String = "") -> String:
+	if ver.is_empty():
+		return fallback
+	return ver
 
 
 func _ensure_repo_cloned(repo_name: String, fallback_url: String = "") -> bool:
@@ -1539,7 +1617,7 @@ func _finalize_search_display(found_addons: Array):
 			item.set_tooltip_text(2, _search_url)
 
 		var ver = p.get("version", "")
-		item.set_text(3, ("v" + ver) if not ver.is_empty() else "")
+		item.set_text(3, _format_version(ver))
 
 		var is_from_release = p.get("_from_release", false)
 		var type_raw = p.get("type", "")
@@ -1974,10 +2052,12 @@ func _start_release_install(
 		return
 
 	PlugLogger.info("Downloading release %s %s..." % [repo_name, tag])
+	_set_checked_items_status(tr("STATUS_DOWNLOADING"), COLOR_CHECKING)
 	release_manager.download_completed.connect(
 		func(ok: bool, _cache_dir: String):
 			if ok:
 				PlugLogger.debug("_start_release_install: download OK, applying install")
+				_set_checked_items_status(tr("STATUS_INSTALLING"), COLOR_CHECKING)
 				_run_release_install_task(repo_name, tag, addon_dir, also_run_source)
 			else:
 				var err_key = release_manager.get_last_error()
@@ -2155,8 +2235,14 @@ func _backfill_release_addon_metadata(
 			if scan_by_dir.has(pdir_tail):
 				md = scan_by_dir[pdir_tail]
 		if md.is_empty():
+			var fallback_patch: Dictionary = {}
 			if p.get("type", "") == "" and not detected_type.is_empty():
-				addon_data.update_addon_metadata(repo_name, pdir, {"type": detected_type})
+				fallback_patch["type"] = detected_type
+			var tag_fb: String = p.get("installed_tag", "")
+			if not tag_fb.is_empty() and (force_overwrite or p.get("version", "") == ""):
+				fallback_patch["version"] = tag_fb
+			if not fallback_patch.is_empty():
+				addon_data.update_addon_metadata(repo_name, pdir, fallback_patch)
 			continue
 		var patch: Dictionary = {"type": md.get("type", detected_type)}
 		var current_name: String = p.get("name", "")
@@ -2170,6 +2256,10 @@ func _backfill_release_addon_metadata(
 		for k in ["description", "version", "author"]:
 			if md.get(k, "") != "" and (force_overwrite or p.get(k, "") == ""):
 				patch[k] = md[k]
+		if not patch.has("version") or patch["version"] == "":
+			var tag_fallback: String = p.get("installed_tag", "")
+			if not tag_fallback.is_empty() and (force_overwrite or p.get("version", "") == ""):
+				patch["version"] = tag_fallback
 		addon_data.update_addon_metadata(repo_name, pdir, patch)
 
 
@@ -2499,6 +2589,8 @@ func _on_CancelUpdateBtn_pressed():
 	show_overlay(false)
 	if _is_executing:
 		_update_cancelled = true
+		if not _update_active:
+			_update_done = true
 		PlugLogger.info(_tr("LOG_UPDATE_CANCELLED"))
 	elif _version_info_task_id_active:
 		var check_keys: Array = []
@@ -2545,14 +2637,11 @@ func _uninstall_repo(repo_name: String):
 	_erase_commit_cache_for_repo(repo_name)
 	_refresh_installed_tree()
 	_update_search_tree_install_status()
-	var rm := release_manager
 	WorkerThreadPool.add_task(
 		func():
 			for p in installed:
 				var dest: String = p.get("addon_dir", "")
 				GitManager.delete_installed_dir(dest)
-			if rm:
-				rm.clear_repo_cache(repo_name)
 	)
 
 
@@ -2649,8 +2738,19 @@ func _switch_release_version(repo_name: String, new_tag: String):
 		var addon_dir = installed[0].get("addon_dir", "") if not installed.is_empty() else ""
 		release_manager.releases_fetched.connect(
 			func(releases: Array):
+				var target_release: Dictionary = {}
+				for rel in releases:
+					if rel.get("tag_name", "") == new_tag:
+						target_release = rel
+						break
+				if target_release.is_empty():
+					_show_toast(tr("ERR_RELEASE_NOT_FOUND"), true)
+					_is_executing = false
+					show_overlay(false)
+					disable_ui(false)
+					return
 				var matched_assets = AssetMatcher.match_assets(
-					releases[0].get("assets", []) if not releases.is_empty() else [], pattern, url
+					target_release.get("assets", []), pattern, url
 				)
 				if matched_assets.is_empty():
 					_show_toast(tr("ERR_RELEASE_NOT_FOUND"), true)
@@ -2693,6 +2793,13 @@ func _apply_release_from_cache(repo_name: String, new_tag: String):
 		% [repo_name, new_tag, cache_dir]
 	)
 	var installed = addon_data.get_installed_addons(repo_name)
+
+	# --- Phase 1: Backup old addon directories ---
+	var backed_up := _backup_installed_addons(repo_name, installed, project_root)
+
+	# --- Phase 2: Copy new version from cache ---
+	var success := true
+	var installed_tags: Array[Dictionary] = []
 	for p in installed:
 		var addon_dir_rel: String = p.get("addon_dir", "")
 		if addon_dir_rel.is_empty():
@@ -2721,18 +2828,74 @@ func _apply_release_from_cache(repo_name: String, new_tag: String):
 		if copied == 0:
 			PlugLogger.info("Release cache stale: 0 files copied, clearing cache %s" % cache_dir)
 			release_manager.clear_tag_cache(repo_name, new_tag)
+			success = false
 			continue
-		addon_data.set_addon_installed_tag(repo_name, addon_dir_rel, new_tag)
-	# Refresh detected type for the new tag's content (cache-hit path may have
-	# stale `_last_detected_type` from a previous tag), then overwrite
-	# tag-specific metadata (name/description/version/author) from the new
-	# tag's plugin.cfg so the installed tab reflects the switched tag.
+		installed_tags.append({"dir": addon_dir_rel, "tag": new_tag})
+
+	# --- Phase 3: Check cancel / failure and handle ---
+	if _update_cancelled or not success:
+		PlugLogger.info("Version switch rolled back for %s" % repo_name)
+		_rollback_release_switch(backed_up, project_root, repo_name)
+		return
+
+	for entry in installed_tags:
+		addon_data.set_addon_installed_tag(repo_name, entry["dir"], entry["tag"])
 	release_manager.inspect_cache_dir(cache_dir)
 	_backfill_release_addon_metadata(repo_name, cache_dir, true)
 	addon_data.save_data()
-	# Use `_tr` (TranslationServer-based) instead of `tr()` because this
-	# function runs in WorkerThreadPool and `Node.tr()` requires main thread.
+	_cleanup_upgrade_backup(repo_name)
 	PlugLogger.info(_tr("LOG_RELEASE_CACHED") % new_tag)
+
+
+## Backup all currently installed addon directories for a repo before switching.
+## Returns an array of {addon_dir_rel, backup_path} for later restore.
+func _backup_installed_addons(
+	repo_name: String, installed: Array, project_root: String
+) -> Array:
+	var backup_root := _get_upgrade_backup_dir(repo_name)
+	var backed_up: Array = []
+	for p in installed:
+		var addon_dir_rel: String = p.get("addon_dir", "")
+		if addon_dir_rel.is_empty():
+			continue
+		var full_path := project_root.path_join(addon_dir_rel)
+		if not DirAccess.dir_exists_absolute(full_path):
+			continue
+		var backup_path := backup_root.path_join(addon_dir_rel.get_file())
+		DirAccess.make_dir_recursive_absolute(backup_root)
+		PlugLogger.debug("Backing up %s → %s" % [full_path, backup_path])
+		GitManager._copy_dir_recursive(full_path, backup_path)
+		GitManager.delete_installed_dir(addon_dir_rel)
+		backed_up.append({"addon_dir_rel": addon_dir_rel, "backup_path": backup_path})
+	return backed_up
+
+
+## Restore addon directories from backup and clean up.
+func _rollback_release_switch(
+	backed_up: Array, project_root: String, repo_name: String
+) -> void:
+	for b in backed_up:
+		var dst := project_root.path_join(b["addon_dir_rel"])
+		var src: String = b["backup_path"]
+		if DirAccess.dir_exists_absolute(dst):
+			GitManager.delete_directory(dst)
+		PlugLogger.debug("Restoring backup %s → %s" % [src, dst])
+		DirAccess.make_dir_recursive_absolute(dst)
+		GitManager._copy_dir_recursive(src, dst)
+	_cleanup_upgrade_backup(repo_name)
+
+
+func _get_upgrade_backup_dir(repo_name: String) -> String:
+	var safe_name := repo_name.replace("/", "_")
+	return OS.get_cache_dir().path_join("gd-plug-plus").path_join(
+		"_upgrade_backup"
+	).path_join(safe_name)
+
+
+func _cleanup_upgrade_backup(repo_name: String) -> void:
+	var backup_dir := _get_upgrade_backup_dir(repo_name)
+	if DirAccess.dir_exists_absolute(backup_dir):
+		GitManager.delete_directory(backup_dir)
 
 
 func _copy_release_auto_detect(
@@ -3747,6 +3910,16 @@ func _setup_settings_tab():
 	var auth_panel := _build_auth_category_panel(margin)
 	content_vbox.add_child(auth_panel)
 	_register_settings_category("auth", sidebar_vbox, "SETTINGS_CATEGORY_AUTH", auth_panel)
+	var network_panel := _build_network_category_panel()
+	content_vbox.add_child(network_panel)
+	_register_settings_category(
+		"network", sidebar_vbox, "SETTINGS_CATEGORY_NETWORK", network_panel
+	)
+	var cache_panel := _build_cache_category_panel()
+	content_vbox.add_child(cache_panel)
+	_register_settings_category(
+		"cache", sidebar_vbox, "SETTINGS_CATEGORY_CACHE", cache_panel
+	)
 	var about_panel := _build_about_category_panel()
 	content_vbox.add_child(about_panel)
 	_register_settings_category("about", sidebar_vbox, "SETTINGS_CATEGORY_ABOUT", about_panel)
@@ -3823,6 +3996,235 @@ func _build_auth_category_panel(_margin: int) -> Control:
 		page.add_child(outer)
 		_settings_platform_panels[key] = outer
 	return page
+
+
+func _build_network_category_panel() -> Control:
+	var page = VBoxContainer.new()
+	page.add_theme_constant_override(
+		"separation", _scaled(PlugUIConstants.SEPARATION_LARGE)
+	)
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	var outer = MarginContainer.new()
+	var panel = PanelContainer.new()
+	outer.add_child(panel)
+	var inner = MarginContainer.new()
+	var pad := _scaled(8)
+	inner.add_theme_constant_override("margin_left", pad)
+	inner.add_theme_constant_override("margin_right", pad)
+	inner.add_theme_constant_override("margin_top", pad)
+	inner.add_theme_constant_override("margin_bottom", pad)
+	panel.add_child(inner)
+
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override(
+		"separation", _scaled(PlugUIConstants.SEPARATION_STANDARD)
+	)
+
+	_proxy_enable_cb = CheckBox.new()
+	_proxy_enable_cb.text = tr("SETTINGS_PROXY_ENABLE")
+	vbox.add_child(_proxy_enable_cb)
+
+	var addr_hbox = HBoxContainer.new()
+	addr_hbox.add_theme_constant_override("separation", _scaled(4))
+	var host_label = Label.new()
+	host_label.text = tr("SETTINGS_PROXY_HOST")
+	addr_hbox.add_child(host_label)
+	_proxy_host_input = LineEdit.new()
+	_proxy_host_input.placeholder_text = ProxyConfig.DEFAULT_HOST
+	_proxy_host_input.custom_minimum_size = Vector2(_scaled(200), 0)
+	addr_hbox.add_child(_proxy_host_input)
+	var port_label = Label.new()
+	port_label.text = tr("SETTINGS_PROXY_PORT")
+	addr_hbox.add_child(port_label)
+	_proxy_port_spin = SpinBox.new()
+	_proxy_port_spin.min_value = 1
+	_proxy_port_spin.max_value = 65535
+	_proxy_port_spin.value = ProxyConfig.DEFAULT_PORT
+	_proxy_port_spin.custom_minimum_size = Vector2(_scaled(90), 0)
+	addr_hbox.add_child(_proxy_port_spin)
+	var save_btn = Button.new()
+	save_btn.text = tr("BTN_SAVE")
+	save_btn.pressed.connect(_on_save_proxy)
+	addr_hbox.add_child(save_btn)
+	vbox.add_child(addr_hbox)
+
+	inner.add_child(vbox)
+	page.add_child(outer)
+
+	var cfg := ProxyConfig.load_config()
+	_proxy_enable_cb.button_pressed = cfg.get("enabled", false)
+	_proxy_host_input.text = cfg.get("host", ProxyConfig.DEFAULT_HOST)
+	_proxy_port_spin.value = int(cfg.get("port", ProxyConfig.DEFAULT_PORT))
+
+	return page
+
+
+func _on_save_proxy() -> void:
+	var cfg := {
+		"enabled": _proxy_enable_cb.button_pressed,
+		"host": _proxy_host_input.text.strip_edges(),
+		"port": int(_proxy_port_spin.value),
+	}
+	if cfg["host"].is_empty():
+		cfg["host"] = ProxyConfig.DEFAULT_HOST
+	ProxyConfig.save_config(cfg)
+	_apply_proxy_to_all()
+	_show_toast(tr("TOAST_PROXY_SAVED"))
+
+
+func _apply_proxy_to_all() -> void:
+	release_manager.apply_proxy()
+	if _device_flow and is_instance_valid(_device_flow):
+		_device_flow.apply_proxy()
+	for key in _settings_platform_rows:
+		var row: Dictionary = _settings_platform_rows[key]
+		var http: HTTPRequest = row.get("validate_http", null)
+		if http != null and is_instance_valid(http):
+			ProxyConfig.apply_to_http(http)
+
+
+func _build_cache_category_panel() -> Control:
+	var page = VBoxContainer.new()
+	page.add_theme_constant_override(
+		"separation", _scaled(PlugUIConstants.SEPARATION_LARGE)
+	)
+	page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cache_labels.clear()
+	var repo_path := GitManager.get_plugged_dir()
+	var release_path := ReleaseCache.get_cache_root()
+	var sections: Array[Dictionary] = [
+		{
+			"title_key": "CACHE_SECTION_REPO",
+			"path": repo_path,
+			"btn_key": "BTN_CLEAR_CACHE",
+			"callback": _on_clear_repo_cache,
+			"path_ref": "repo",
+		},
+		{
+			"title_key": "CACHE_SECTION_RELEASE",
+			"path": release_path,
+			"btn_key": "BTN_CLEAR_CACHE",
+			"callback": _on_clear_release_cache,
+			"path_ref": "release",
+		},
+	]
+	for sec in sections:
+		var outer = MarginContainer.new()
+		var panel = PanelContainer.new()
+		outer.add_child(panel)
+		var inner = MarginContainer.new()
+		var pad := _scaled(8)
+		inner.add_theme_constant_override("margin_left", pad)
+		inner.add_theme_constant_override("margin_right", pad)
+		inner.add_theme_constant_override("margin_top", pad)
+		inner.add_theme_constant_override("margin_bottom", pad)
+		panel.add_child(inner)
+		var vbox = VBoxContainer.new()
+		vbox.add_theme_constant_override(
+			"separation",
+			_scaled(PlugUIConstants.SEPARATION_STANDARD),
+		)
+		var title_hbox = HBoxContainer.new()
+		title_hbox.add_theme_constant_override(
+			"separation",
+			_scaled(PlugUIConstants.SEPARATION_STANDARD),
+		)
+		var title = Label.new()
+		title.text = tr(sec["title_key"])
+		title.add_theme_color_override("font_color", COLOR_URL)
+		title_hbox.add_child(title)
+		_cache_labels.append(
+			{"label": title, "i18n_key": sec["title_key"]}
+		)
+		var btn = Button.new()
+		btn.text = tr(sec["btn_key"])
+		btn.pressed.connect(sec["callback"])
+		if sec["path_ref"] == "repo":
+			_cache_clear_repo_btn = btn
+		else:
+			_cache_clear_release_btn = btn
+		title_hbox.add_child(btn)
+		vbox.add_child(title_hbox)
+		var hbox = HBoxContainer.new()
+		hbox.add_theme_constant_override(
+			"separation",
+			_scaled(PlugUIConstants.SEPARATION_STANDARD),
+		)
+		var path_key = Label.new()
+		path_key.text = tr("CACHE_PATH")
+		path_key.add_theme_color_override(
+			"font_color", COLOR_UNKNOWN
+		)
+		hbox.add_child(path_key)
+		_cache_labels.append(
+			{"label": path_key, "i18n_key": "CACHE_PATH"}
+		)
+		var path_val = Label.new()
+		path_val.text = sec["path"]
+		path_val.clip_text = true
+		path_val.text_overrun_behavior = (
+			TextServer.OVERRUN_TRIM_ELLIPSIS
+		)
+		path_val.tooltip_text = sec["path"]
+		path_val.size_flags_horizontal = (
+			Control.SIZE_EXPAND_FILL
+		)
+		path_val.mouse_filter = Control.MOUSE_FILTER_STOP
+		path_val.mouse_default_cursor_shape = (
+			Control.CURSOR_POINTING_HAND
+		)
+		var open_path: String = sec["path"]
+		path_val.gui_input.connect(
+			func(event: InputEvent):
+				if (
+					event is InputEventMouseButton
+					and event.pressed
+					and event.button_index == MOUSE_BUTTON_LEFT
+				):
+					OS.shell_open(open_path)
+		)
+		hbox.add_child(path_val)
+		if sec["path_ref"] == "repo":
+			_cache_repo_path_label = path_val
+		else:
+			_cache_release_path_label = path_val
+		vbox.add_child(hbox)
+		inner.add_child(vbox)
+		page.add_child(outer)
+	return page
+
+
+func _on_clear_repo_cache() -> void:
+	_clear_cache_async(
+		GitManager.get_plugged_dir(), _cache_clear_repo_btn
+	)
+
+
+func _on_clear_release_cache() -> void:
+	_clear_cache_async(
+		ReleaseCache.get_cache_root(), _cache_clear_release_btn
+	)
+
+
+func _clear_cache_async(path: String, btn: Button) -> void:
+	if btn:
+		btn.disabled = true
+		btn.text = tr("BTN_CLEARING_CACHE")
+	WorkerThreadPool.add_task(
+		func():
+			if DirAccess.dir_exists_absolute(path):
+				GitManager.delete_directory(path)
+				DirAccess.make_dir_recursive_absolute(path)
+			call_deferred("_on_cache_cleared", btn)
+	)
+
+
+func _on_cache_cleared(btn: Button) -> void:
+	if btn:
+		btn.disabled = false
+		btn.text = tr("BTN_CLEAR_CACHE")
+	_show_toast(tr("TOAST_CACHE_CLEARED"))
 
 
 func _build_about_category_panel() -> Control:
@@ -4099,6 +4501,12 @@ func _retranslate_settings_tab() -> void:
 		_settings_header_rtl.text = _build_header_bbcode(token_dir)
 	for entry in _about_labels:
 		(entry["label"] as Label).text = tr(entry["i18n_key"])
+	for entry in _cache_labels:
+		(entry["label"] as Label).text = tr(entry["i18n_key"])
+	if _cache_clear_repo_btn:
+		_cache_clear_repo_btn.text = tr("BTN_CLEAR_CACHE")
+	if _cache_clear_release_btn:
+		_cache_clear_release_btn.text = tr("BTN_CLEAR_CACHE")
 	_refresh_all_platform_rows()
 
 
@@ -4205,6 +4613,7 @@ func _on_pat_validate(key: String) -> void:
 	var http: HTTPRequest = row.get("validate_http", null)
 	if http == null or not is_instance_valid(http):
 		http = HTTPRequest.new()
+		ProxyConfig.apply_to_http(http)
 		add_child(http)
 		row["validate_http"] = http
 	http.cancel_request()
@@ -4629,7 +5038,7 @@ func _refresh_available_item_from_installed(item: TreeItem, repo_name: String, a
 		return
 
 	var ver: String = match_addon.get("version", "")
-	item.set_text(3, ("v" + ver) if not ver.is_empty() else "--")
+	item.set_text(3, _format_version(ver, "--"))
 	item.set_text_alignment(3, HORIZONTAL_ALIGNMENT_CENTER)
 
 	var is_release_installed: bool = match_addon.get("installed_from", "") == "release"
@@ -4691,7 +5100,7 @@ func _refresh_available_item_from_installed(item: TreeItem, repo_name: String, a
 	item.set_text_alignment(6, HORIZONTAL_ALIGNMENT_CENTER)
 
 
-func _set_checked_items_status(status_text: String, color: Color):
+func _set_checked_items_status(status_text: String, color: Color, tooltip: String = ""):
 	var root = search_tree.get_root()
 	if root == null:
 		return
@@ -4700,6 +5109,7 @@ func _set_checked_items_status(status_text: String, color: Color):
 		if child.is_checked(0):
 			child.set_text(1, status_text)
 			child.set_custom_color(1, color)
+			child.set_tooltip_text(1, tooltip)
 			child.set_editable(0, false)
 		child = child.get_next()
 
