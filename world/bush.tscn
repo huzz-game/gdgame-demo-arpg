@@ -17,5 +17,6 @@ position = Vector2(0, -7)
 shape = SubResource("CircleShape2D_b1g3l")
 
 [node name="ShadowSprite2D" type="Sprite2D" parent="." unique_id=1293417507]
+z_index = -10
 position = Vector2(0, -3)
 texture = ExtResource("2_38vgs")

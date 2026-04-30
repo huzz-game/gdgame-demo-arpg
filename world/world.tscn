@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://dgdmwihm12aid" path="res://enemies/bat_enemy.tscn" id="8_ai45w"]
 [ext_resource type="PackedScene" uid="uid://biuwdcidi7x4h" path="res://ui/hearts_ui.tscn" id="9_4papg"]
 [ext_resource type="AudioStream" uid="uid://dl7c7othlut1x" path="res://music_and_sounds/music.mp3" id="10_fyhu2"]
-[ext_resource type="PackedScene" uid="uid://dbxev8mvlp4v7" path="res://pauser.tscn" id="10_ov2xu"]
+[ext_resource type="PackedScene" uid="uid://dbxev8mvlp4v7" path="res://pauser_ui.tscn" id="10_ov2xu"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_ov2xu"]
 vertices = PackedVector2Array(476, 152, 476, 184, 444, 184, 412.25, 183, 409.8125, 173.88281, 520, 152, 328, 132, 328, 56, 392, 36, 554.10156, -10.640625, 456, 324, 559.9297, 283.8828, 434.3125, 369.8828, 395.7578, -28.976563, 392, -8, 520, 228, 254.21094, 236, 322.1875, 232.11719, 328.8828, 238.8125, 251.50781, 246.10156, 378.1875, 192.11719, 384.8828, 198.8125, 130, 196.75, 104, 196, 290, 192.21094, 145.8125, 101.88281, 143.92969, 100, 168, 100, 316, 36, 284, 56, 284, 324, 52.539063, 346.2578, 232, 324, 92, 324, 444, 260, 353.8125, 232.11719, 356.25, 223, 403.1172, 198.8125, 456, 280, 488, 260, 378.1875, 173.88281, 375.75, 183, 310.21094, 172, 307.5078, 161.89063, 297.60938, -26.007813, 316, -8, 319.75, 223, 251.50781, 225.89063, 148.25, 111, 168, 56, 252, 88, 252, 132, 204.10156, 114.5, 284, 88, 114.1875, 101.88281, 111.75, 111, 104, 120, 72, 120, 72, 56, 124, 56, 28, 164, 60, 164, 60, 196, 488, 228, 284, 280, 86.21094, 260, 234, 256.21094, 232, 280, 92, 280, 83.50781, 270.10156, 76.10156, 277.5078, 307.5078, 182.10156, 66, 280.21094, 55.890625, 277.5078, 409.8125, 192.11719, 322.1875, 213.88281, 234, 215.78906, 148.25, 215, 145.8125, 205.88281, 328.8828, 207.1875, 214.21094, 132, 211.50781, 121.890625, 272.5, 161.89063, 211.50781, 142.10156, 279.89063, 154.5, 124, 94.35156, 120.88281, 95.1875, 244.10156, 218.5, 403.1172, 167.1875, 394, 164.75, 384.8828, 167.1875, 300.10156, 154.5, 290, 151.78906, 269.78906, 172, 204.10156, 149.50781, 347.1172, 238.8125, 20.929688, 23.210938, 272.5, 182.10156, 194, 152.21094, 300.10156, 189.50781, 48.5, 270.10156, -7.7890625, 144.8125, 45.789063, 260, 48.5, 249.89063, 55.890625, 242.5, 66, 239.78906, 176.5, 121.890625, 145.8125, 120.11719, 183.89063, 114.5, 139.11719, 199.1875, 338, 204.75, 244.10156, 253.50781, 338, 241.25, 76.10156, 242.5, 394, 201.25, 353.8125, 213.88281, 347.1172, 207.1875, 194, 111.78906, 173.78906, 132, 139.11719, 126.8125, 176.5, 142.10156, 130, 129.25, 183.89063, 149.50781, 120.88281, 126.8125, 279.89063, 189.50781, 223.89063, 218.5, 216.5, 225.89063, 213.78906, 236, 145.8125, 224.11719, 216.5, 246.10156, 139.11719, 230.8125, 130, 233.25, 223.89063, 253.50781, 114.1875, 120.11719, 28, 56, 83.50781, 249.89063, 114.1875, 224.11719, 111.75, 215, 120.88281, 230.8125, 114.1875, 205.88281, 120.88281, 199.1875)
@@ -49,12 +49,12 @@ tile_map_data = PackedByteArray("AAACAAUAAQADAAIAAAACAAQAAQAHAAAAAAABAAQAAQAEAAM
 tile_set = ExtResource("3_fn3g3")
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=2113123010]
+visible = false
 position = Vector2(-2, 2)
 navigation_polygon = SubResource("NavigationPolygon_ov2xu")
 
 [node name="Player" parent="." unique_id=1042779890 groups=["player"] instance=ExtResource("1_6xmxd")]
 position = Vector2(224, 182)
-motion_mode = 1
 
 [node name="Tree" parent="." unique_id=1175536481 instance=ExtResource("4_h5o24")]
 position = Vector2(192, 144)
@@ -135,14 +135,21 @@ position = Vector2(248, 136)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=312168020]
 
+[node name="PauserUI" parent="UI" unique_id=908583878 instance=ExtResource("10_ov2xu")]
+process_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
 [node name="HeartsUI" parent="UI" unique_id=1151638792 instance=ExtResource("9_4papg")]
 offset_left = 4.0
 offset_top = 4.0
 offset_right = 4.0
 offset_bottom = 4.0
-
-[node name="Pauser" parent="." unique_id=908583878 instance=ExtResource("10_ov2xu")]
-process_mode = 3
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=79732912]
 stream = ExtResource("10_fyhu2")
